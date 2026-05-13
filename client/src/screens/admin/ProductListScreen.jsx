@@ -1,134 +1,147 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import {
+  listProducts,
+  deleteProduct,
+  createProduct,
+  resetProductCreate,
+  resetProductDelete
+} from '../../slices/productSlice'
 
-function ProductListScreen() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingCreate, setLoadingCreate] = useState(false);
-  const [loadingDelete, setLoadingDelete] = useState(false);
-  const [error, setError] = useState(null);
+const ProductListScreen = () => {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
 
-  const { userInfo } = useSelector((state) => state.auth);
-  const navigate = useNavigate();
+  const {
+    products,
+    product,
+    loading,
+    error,
+    successDelete,
+    successCreate
+  } = useSelector((state) => state.products)
 
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch('/api/products');
-      const data = await res.json();
-      setProducts(data);
-    } catch (err) {
-      setError('Failed to fetch products');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { userInfo } = useSelector((state) => state.auth)
 
   useEffect(() => {
-    if (!userInfo || !userInfo.isAdmin) {
-      navigate('/login');
-      return;
+    if (!userInfo?.isAdmin) {
+      navigate('/login')
     }
-    fetchProducts();
-  }, [userInfo, navigate]);
 
-  const createProductHandler = async () => {
-    setLoadingCreate(true);
-    try {
-      const res = await fetch('/api/products', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (res.ok) {
-        navigate(`/admin/product/${data._id}/edit`);
-      } else {
-        alert(data.message);
-      }
-    } catch (err) {
-      alert('Error creating product');
-    } finally {
-      setLoadingCreate(false);
+    if (successCreate) {
+      dispatch(resetProductCreate())
+      navigate(`/admin/product/${products._id}/edit`)
     }
-  };
 
-  const deleteHandler = async (id) => {
-    if (window.confirm('Are you sure?')) {
-      setLoadingDelete(true);
-      try {
-        const res = await fetch(`/api/products/${id}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        });
-        if (res.ok) {
-          fetchProducts(); // Refresh list
-        } else {
-          const data = await res.json();
-          alert(data.message);
-        }
-      } catch (err) {
-        alert('Error deleting product');
-      } finally {
-        setLoadingDelete(false);
-      }
+    if (successDelete) {
+      dispatch(resetProductDelete())
     }
-  };
 
-  if (loading) return <div className="text-center mt-10">Loading...</div>;
-  if (error) return <div className="text-center mt-10 text-red-500">{error}</div>;
+    if (!successCreate) {
+      dispatch(listProducts())
+    }
+  }, [dispatch, navigate, userInfo, successCreate, successDelete, product])
+
+  const deleteHandler = (id) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      dispatch(deleteProduct(id))
+    }
+  }
+
+  const createProductHandler = () => {
+    dispatch(createProduct())
+  }
 
   return (
-    <div className="max-w-6xl mx-auto mt-10 p-4">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Products</h1>
-        <button
+        <h1 className="text-3xl font-bold">Products</h1>
+        {/* <button
           onClick={createProductHandler}
-          disabled={loadingCreate}
-          className="bg-green-500 text-white px-4 py-2 rounded disabled:bg-gray-400"
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg"
         >
-          {loadingCreate? 'Creating...' : 'Create Product'}
-        </button>
+          + Create Product
+        </button> */}
+        <Link
+          to="/admin/product/create"
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg"
+        >
+          + Create Product
+        </Link>
       </div>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border p-2 text-left">ID</th>
-            <th className="border p-2 text-left">NAME</th>
-            <th className="border p-2 text-left">PRICE</th>
-            <th className="border p-2 text-left">CATEGORY</th>
-            <th className="border p-2 text-left">BRAND</th>
-            <th className="border p-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => (
-            <tr key={product._id} className="hover:bg-gray-50">
-              <td className="border p-2">{product._id.substring(0, 8)}...</td>
-              <td className="border p-2">{product.name}</td>
-              <td className="border p-2">${product.price}</td>
-              <td className="border p-2">{product.category}</td>
-              <td className="border p-2">{product.brand}</td>
-              <td className="border p-2">
-                <Link
-                  to={`/admin/product/${product._id}/edit`}
-                  className="bg-blue-500 text-white px-3 py-1 rounded text-sm mr-2"
-                >
-                  Edit
-                </Link>
-                <button
-                  onClick={() => deleteHandler(product._id)}
-                  disabled={loadingDelete}
-                  className="bg-red-500 text-white px-3 py-1 rounded text-sm disabled:bg-gray-400"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+
+      {loading ? (
+        <div className="text-center py-10">Loading...</div>
+      ) : error ? (
+        <div className="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    NAME
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PRICE
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    CATEGORY
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    BRAND
+                  </th>
+                  <th className="px-6 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {products.map((product) => (
+                  <tr key={product._id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {product._id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {product.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ${product.price}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.category}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.brand}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                      <Link
+                        to={`/admin/product/${product._id}/edit`}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => deleteHandler(product._id)}
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  )
 }
 
-export default ProductListScreen;
+export default ProductListScreen

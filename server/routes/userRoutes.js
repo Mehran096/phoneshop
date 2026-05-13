@@ -188,43 +188,40 @@ router.get('/', protect, admin, async (req, res) => {
 // @desc Get user by ID
 // @route GET /api/users/:id
 // @access Private/Admin
-router.get('/:id', protect, admin, async (req, res) => {
-  const user = await User.findById(req.params.id).select('-password');
+router.get('/:id', protect, admin, asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).select('-password')
   if (user) {
-    res.json(user);
+    res.json(user)
   } else {
-    res.status(404).json({ message: 'User not found' });
+    res.status(404)
+    throw new Error('User not found')
   }
-});
+}))
 
-router.put('/:id', protect, admin, async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
+// @desc Update user
+// @route PUT /api/users/:id
+// @access Private/Admin
+router.put('/:id', protect, admin, asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id)
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+  if (user) {
+    user.name = req.body.name || user.name
+    user.email = req.body.email || user.email
+    user.isAdmin = req.body.isAdmin !== undefined ? req.body.isAdmin : user.isAdmin
 
-    user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
-    
-    // This line was likely causing the 500
-    if (req.body.isAdmin !== undefined) {
-      user.isAdmin = Boolean(req.body.isAdmin);
-    }
+    const updatedUser = await user.save()
 
-    const updatedUser = await user.save();
     res.json({
       _id: updatedUser._id,
       name: updatedUser.name,
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
-    });
-  } catch (error) {
-    console.log(error); // ← This will print the real error
-    res.status(500).json({ message: error.message });
+    })
+  } else {
+    res.status(404)
+    throw new Error('User not found')
   }
-});
+}))
 
 // @desc Delete user
 // @route DELETE /api/users/:id

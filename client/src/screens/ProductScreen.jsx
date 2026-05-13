@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
-import { fetchProductById } from '../slices/productSlice';
+import { getProductDetails } from '../slices/productSlice'
 import { addToCart } from '../slices/cartSlice';
 
 function ProductScreen() {
@@ -11,9 +11,9 @@ function ProductScreen() {
     const dispatch = useDispatch();
     const { product, loading, error } = useSelector((state) => state.products);
 
-    useEffect(() => {
-        dispatch(fetchProductById(id));
-    }, [dispatch, id]);
+   useEffect(() => {
+  dispatch(getProductDetails(id))
+}, [dispatch, id])
 
     const addToCartHandler = () => {
         dispatch(addToCart({ ...product, qty }));

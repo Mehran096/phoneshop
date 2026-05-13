@@ -1,54 +1,201 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import axios from 'axios'
 
-// Fetch all products for HomeScreen
-export const fetchProducts = createAsyncThunk('products/fetchAll', async () => {
-  const { data } = await axios.get('/api/products');
-  return data;
-});
+// GET ALL PRODUCTS - public
+export const listProducts = createAsyncThunk(
+  'product/listProducts',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await axios.get('/api/products')
+      return data
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message)
+    }
+  }
+)
 
-// Fetch single product for ProductScreen
-export const fetchProductById = createAsyncThunk('products/fetchById', async (id) => {
-  const { data } = await axios.get(`/api/products/${id}`);
-  return data;
-});
+// GET PRODUCT BY ID - public
+export const getProductDetails = createAsyncThunk(
+  'product/getProductDetails',
+  async (id, { rejectWithValue }) => {
+    try {
+      const { data } = await axios.get(`/api/products/${id}`)
+      return data
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message)
+    }
+  }
+)
+
+// DELETE PRODUCT - admin only
+export const deleteProduct = createAsyncThunk(
+  'product/deleteProduct',
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo } }= getState()
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      }
+
+      await axios.delete(`/api/products/${id}`, config)
+      return id
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message)
+    }
+  }
+)
+
+export const createProduct = createAsyncThunk(
+  'product/createProduct',
+  async (productData, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo }} = getState()
+
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      }
+
+      const { data } = await axios.post('/api/products', productData, config)
+      return data
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message)
+    }
+  }
+)
+
+// UPDATE PRODUCT - admin only
+export const updateProduct = createAsyncThunk(
+  'product/updateProduct',
+  async ({ id, productData }, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo } }= getState()
+
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      }
+
+      const { data } = await axios.put(`/api/products/${id}`, productData, config)
+      return data
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message)
+    }
+  }
+)
 
 const productSlice = createSlice({
   name: 'product',
   initialState: {
-    items: [], // for all products
-    product: {}, // for single product
+    products: [],
+    product: null,
     loading: false,
     error: null,
+    successDelete: false,
+    successCreate: false,
+    successUpdate: false,
   },
-  reducers: {},
+  reducers: {
+    resetProductCreate: (state) => {
+      state.successCreate = false
+      state.product = null
+    },
+    resetProductUpdate: (state) => {
+      state.successUpdate = false
+    },
+    resetProductDelete: (state) => {
+      state.successDelete = false
+    },
+    resetProductDetails: (state) => {
+      state.product = null
+    },
+  },
   extraReducers: (builder) => {
     builder
-      // fetchProducts cases
-      .addCase(fetchProducts.pending, (state) => {
-        state.loading = true;
+      // List Products
+      .addCase(listProducts.pending, (state) => { 
+        state.loading = true 
+        state.error = null
       })
-      .addCase(fetchProducts.fulfilled, (state, action) => {
-        state.loading = false;
-        state.items = action.payload;
+      .addCase(listProducts.fulfilled, (state, action) => {
+        state.loading = false
+        state.products = action.payload || []
       })
-      .addCase(fetchProducts.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message;
+      .addCase(listProducts.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
       })
-      // fetchProductById cases
-      .addCase(fetchProductById.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(fetchProductById.fulfilled, (state, action) => {
-        state.loading = false;
-        state.product = action.payload;
-      })
-      .addCase(fetchProductById.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message;
-      });
-  },
-});
 
-export default productSlice.reducer;
+      // Get Product Details
+      .addCase(getProductDetails.pending, (state) => { 
+        state.loading = true 
+        state.error = null
+      })
+      .addCase(getProductDetails.fulfilled, (state, action) => {
+        state.loading = false
+        state.product = action.payload
+      })
+      .addCase(getProductDetails.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+
+      // Delete Product
+      .addCase(deleteProduct.pending, (state) => { 
+        state.loading = true 
+      })
+      .addCase(deleteProduct.fulfilled, (state, action) => {
+        state.loading = false
+        state.successDelete = true
+        state.products = state.products.filter((p) => p._id !== action.payload)
+      })
+      .addCase(deleteProduct.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+
+      // Create Product
+      .addCase(createProduct.pending, (state) => { 
+        state.loading = true 
+      })
+      .addCase(createProduct.fulfilled, (state, action) => {
+        state.loading = false
+        state.successCreate = true
+        state.product = action.payload
+      })
+      .addCase(createProduct.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+
+      // Update Product
+      .addCase(updateProduct.pending, (state) => { 
+        state.loading = true 
+      })
+      .addCase(updateProduct.fulfilled, (state, action) => {
+        state.loading = false
+        state.successUpdate = true
+        state.product = action.payload
+      })
+      .addCase(updateProduct.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+  },
+})
+
+export const { 
+  resetProductCreate, 
+  resetProductUpdate, 
+  resetProductDelete, 
+  resetProductDetails 
+} = productSlice.actions
+
+export default productSlice.reducer

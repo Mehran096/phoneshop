@@ -102,6 +102,43 @@ export const deleteUser = createAsyncThunk(
   }
 )
 
+// 1. Define the thunks FIRST
+export const getUserDetails = createAsyncThunk(
+  'auth/getUserDetails',
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo }
+    }= getState()
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo.token}` }
+      }
+    
+      const { data } = await axios.get(`/api/users/${id}`, config)
+      return data
+    
+    
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message)
+    }
+  
+})
+//update user
+export const updateUser = createAsyncThunk(
+  'auth/updateUser',
+  async ({ id, name, email, isAdmin }, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo }} = getState()
+      const config = { 
+        headers: { Authorization: `Bearer ${userInfo.token}` } 
+      }
+      const { data } = await axios.put(`/api/users/${id}`, { name, email, isAdmin }, config)
+      return data
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message)
+    }
+  }
+)
+//createSlice
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
@@ -111,6 +148,8 @@ const authSlice = createSlice({
     error: null,
     successDelete: false,
     success: false,
+    userDetails: null,
+    successUpdate: false
   },
   reducers: {
     setCredentials: (state, action) => {
@@ -132,10 +171,28 @@ const authSlice = createSlice({
       state.users = []
       state.error = null
     },
+    resetUserUpdate: (state) => {
+    state.successUpdate = false
+  },
   },
   extraReducers: (builder) => {
     builder
-     .addCase(listUsers.pending, (state) => {
+      .addCase(getUserDetails.pending, (state) => {
+        state.loading = true
+      })
+      .addCase(getUserDetails.fulfilled, (state, action) => {
+        state.loading = false
+        state.userDetails = action.payload
+      })
+      .addCase(getUserDetails.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+      .addCase(updateUser.fulfilled, (state, action) => {
+        state.loading = false
+        state.successUpdate = true
+      })
+      .addCase(listUsers.pending, (state) => {
         state.loading = true
       })
       .addCase(listUsers.fulfilled, (state, action) => {
@@ -162,23 +219,23 @@ const authSlice = createSlice({
       .addCase(login.pending, (state) => { state.loading = true; state.error = null })
       .addCase(login.fulfilled, (state, action) => { state.loading = false; state.userInfo = action.payload })
       .addCase(login.rejected, (state, action) => { state.loading = false; state.error = action.payload })
-      
+
       .addCase(register.pending, (state) => { state.loading = true; state.error = null })
       .addCase(register.fulfilled, (state, action) => { state.loading = false; state.userInfo = action.payload })
       .addCase(register.rejected, (state, action) => { state.loading = false; state.error = action.payload })
-      
+
       .addCase(updateUserProfile.pending, (state) => { state.loading = true; state.success = false })
-      .addCase(updateUserProfile.fulfilled, (state, action) => { 
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
         state.loading = false
-        state.userInfo = action.payload 
+        state.userInfo = action.payload
         state.success = true
       })
-      .addCase(updateUserProfile.rejected, (state, action) => { 
+      .addCase(updateUserProfile.rejected, (state, action) => {
         state.loading = false
-        state.error = action.payload 
+        state.error = action.payload
       })
   },
 })
 
-export const { setCredentials, logout, resetUpdate } = authSlice.actions
+export const { setCredentials, logout, resetUpdate, resetUserUpdate } = authSlice.actions
 export default authSlice.reducer

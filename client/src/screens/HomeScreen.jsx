@@ -1,15 +1,16 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProducts } from '../slices/productSlice';
+import { listProducts } from '../slices/productSlice'
 import { Link } from 'react-router-dom';
 
 function HomeScreen() {
   const dispatch = useDispatch();
-  const { items: products, loading, error } = useSelector((state) => state.products);
+  const {  products, loading, error } = useSelector((state) => state.products);
+  //console.log( { products, loading, error })
 
-  useEffect(() => {
-    dispatch(fetchProducts());
-  }, [dispatch]);
+ useEffect(() => {
+  dispatch(listProducts())
+}, [dispatch])
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
@@ -17,8 +18,13 @@ function HomeScreen() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <h1 className="text-3xl font-bold text-center mb-8">Latest Phones</h1>
+      {products && products.length === 0 ? (
+  <div className="text-center py-20">
+    <p className="text-gray-500 text-lg">No products found</p>
+  </div>
+) :(
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-        {products.map((product) => (
+        {products?.map((product) => (
           <Link to={`/product/${product._id}`} key={product._id}>
             <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
               <div className="h-64 bg-gray-200">
@@ -39,6 +45,7 @@ function HomeScreen() {
           </Link>
         ))}
       </div>
+)}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { listUsers, deleteUser } from '../../slices/authSlice'
 const UserListScreen = () => {
   const dispatch = useDispatch()
 
-   const { users, loading, error, successDelete } = useSelector((state) => state.auth)
+  const { users, loading, error, successDelete } = useSelector((state) => state.auth)
 
   useEffect(() => {
     dispatch(listUsers())
@@ -21,7 +21,7 @@ const UserListScreen = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Users</h1>
-      
+
       {loading ? (
         <div className="text-center">Loading...</div>
       ) : error ? (
@@ -80,12 +80,14 @@ const UserListScreen = () => {
                     >
                       Edit
                     </Link>
-                    <button
-                      onClick={() => deleteHandler(user._id)}
-                      className="text-red-600 hover:text-red-900 ml-4"
-                    >
-                      Delete
-                    </button>
+                    {!user.isAdmin && (
+                      <button
+                        onClick={() => deleteHandler(user._id)}
+                        className="text-red-600 hover:text-red-900 ml-4"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

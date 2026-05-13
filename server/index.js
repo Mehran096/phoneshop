@@ -22,6 +22,7 @@ app.use(cors({
 }));
 
 app.use(express.json()); // Body parser
+app.use(express.urlencoded({ extended: true }))
 
 // Routes
 app.get('/', (req, res) => {
