@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { logout } from '../slices/authSlice'
+import { logout, logoutUser } from '../slices/authSlice'
 import { FaShoppingCart, FaUser, FaBars, FaTimes, FaChevronDown } from 'react-icons/fa'
+import { clearCartItems } from '../slices/cartSlice'
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -17,6 +18,7 @@ const Header = () => {
 
   const logoutHandler = () => {
     dispatch(logout())
+     dispatch(clearCartItems())
     navigate('/login')
     setUserDropdown(false)
   }

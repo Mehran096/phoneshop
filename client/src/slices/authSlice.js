@@ -1,5 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { clearCartItems } from './cartSlice'
 import axios from 'axios'
+const API_URL = import.meta.env.VITE_API_URL
 
 const userInfoFromStorage = localStorage.getItem('userInfo')
   ? JSON.parse(localStorage.getItem('userInfo'))
@@ -30,6 +32,19 @@ export const register = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message)
     }
+  }
+)
+
+//logout
+export const logoutUser = createAsyncThunk(
+  'auth/logout',
+  async (_, { dispatch }) => {
+    await fetch(`${API_URL}/users/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    dispatch(clearCartItems()) // clear cart on logout
+    return null
   }
 )
 
@@ -177,6 +192,7 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+    
       .addCase(getUserDetails.pending, (state) => {
         state.loading = true
       })
@@ -233,6 +249,12 @@ const authSlice = createSlice({
       .addCase(updateUserProfile.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.userInfo = null
+        state.loading = false
+        state.error = null
+        state.success = false
       })
   },
 })
