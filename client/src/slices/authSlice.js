@@ -1,7 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { clearCartItems } from './cartSlice'
+//import { clearCartItems } from './cartSlice'
 import axios from 'axios'
 const API_URL = import.meta.env.VITE_API_URL
+//const  API = 'api'
 
 const userInfoFromStorage = localStorage.getItem('userInfo')
   ? JSON.parse(localStorage.getItem('userInfo'))
@@ -12,7 +13,7 @@ export const login = createAsyncThunk(
   async ({ email, password }, { rejectWithValue }) => {
     try {
       const config = { headers: { 'Content-Type': 'application/json' } }
-      const { data } = await axios.post('/api/users/auth', { email, password }, config)
+      const { data } = await axios.post(`${API_URL}/users/auth`, { email, password }, config)
       localStorage.setItem('userInfo', JSON.stringify(data))
       return data
     } catch (error) {
@@ -26,7 +27,7 @@ export const register = createAsyncThunk(
   async ({ name, email, password }, { rejectWithValue }) => {
     try {
       const config = { headers: { 'Content-Type': 'application/json' } }
-      const { data } = await axios.post('/api/users', { name, email, password }, config)
+      const { data } = await axios.post(`${API_URL}/users`, { name, email, password }, config)
       localStorage.setItem('userInfo', JSON.stringify(data))
       return data
     } catch (error) {
@@ -36,17 +37,17 @@ export const register = createAsyncThunk(
 )
 
 //logout
-export const logoutUser = createAsyncThunk(
-  'auth/logout',
-  async (_, { dispatch }) => {
-    await fetch(`${API_URL}/users/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    })
-    dispatch(clearCartItems()) // clear cart on logout
-    return null
-  }
-)
+// export const logoutUser = createAsyncThunk(
+//   'auth/logout',
+//   async (_, { dispatch }) => {
+//     await fetch(`${API_URL}/users/logout`, {
+//       method: 'POST',
+//       credentials: 'include',
+//     })
+//     dispatch(clearCartItems()) // clear cart on logout
+//     return null
+//   }
+// )
 
 export const updateUserProfile = createAsyncThunk(
   'auth/updateUserProfile',
@@ -59,7 +60,7 @@ export const updateUserProfile = createAsyncThunk(
           Authorization: `Bearer ${userInfo.token}`,
         },
       }
-      const { data } = await axios.put('/api/users/profile', user, config)
+      const { data } = await axios.put(`${API_URL}/users/profile`, user, config)
       localStorage.setItem('userInfo', JSON.stringify(data))
       return data
     } catch (error) {
@@ -82,7 +83,7 @@ export const listUsers = createAsyncThunk(
         },
       }
 
-      const { data } = await axios.get('/api/users', config)
+      const { data } = await axios.get(`${API_URL}/users`, config)
       return data
     } catch (error) {
       return rejectWithValue(
@@ -107,7 +108,7 @@ export const deleteUser = createAsyncThunk(
         },
       }
 
-      await axios.delete(`/api/users/${id}`, config)
+      await axios.delete(`${API_URL}/users/${id}`, config)
       return id
     } catch (error) {
       return rejectWithValue(
@@ -128,7 +129,7 @@ export const getUserDetails = createAsyncThunk(
         headers: { Authorization: `Bearer ${userInfo.token}` }
       }
     
-      const { data } = await axios.get(`/api/users/${id}`, config)
+      const { data } = await axios.get(`${API_URL}/users/${id}`, config)
       return data
     
     
@@ -146,7 +147,7 @@ export const updateUser = createAsyncThunk(
       const config = { 
         headers: { Authorization: `Bearer ${userInfo.token}` } 
       }
-      const { data } = await axios.put(`/api/users/${id}`, { name, email, isAdmin }, config)
+      const { data } = await axios.put(`${API_URL}/users/${id}`, { name, email, isAdmin }, config)
       return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message)
@@ -250,12 +251,12 @@ const authSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
-      .addCase(logoutUser.fulfilled, (state) => {
-        state.userInfo = null
-        state.loading = false
-        state.error = null
-        state.success = false
-      })
+      // .addCase(logoutUser.fulfilled, (state) => {
+      //   state.userInfo = null
+      //   state.loading = false
+      //   state.error = null
+      //   state.success = false
+      // })
   },
 })
 

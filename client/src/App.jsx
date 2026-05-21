@@ -17,6 +17,8 @@ import UserListScreen from './screens/admin/UserListScreen';
 import UserEditScreen from './screens/admin/UserEditScreen';
 import MyOrdersScreen from './screens/MyOrdersScreen'
 import ProductCreateScreen from './screens/admin/ProductCreateScreen'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 
 function App() {
@@ -25,6 +27,9 @@ function App() {
       <Header />
       <main className="py-4">
           <Routes><Route path="/" element={<HomeScreen />} />
+          <Route path='/search/:keyword' element={<HomeScreen />} />
+<Route path='/page/:pageNumber' element={<HomeScreen />} />
+<Route path='/search/:keyword/page/:pageNumber' element={<HomeScreen />} />
           <Route path="/product/:id" element={<ProductScreen />} />
           <Route path="/cart" element={<CartScreen />} />
           <Route path="/shipping" element={<ShippingScreen />} />
@@ -42,8 +47,10 @@ function App() {
           <Route path="/admin/userlist" element={<UserListScreen />} />
           <Route path="/admin/user/:id/edit" element={<UserEditScreen />} />
           <Route path="/admin/product/create" element={<ProductCreateScreen />} />
+         
           
         </Routes>
+         <ToastContainer />
       </main>
     </>
   );

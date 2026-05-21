@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { createOrder, resetOrder } from '../slices/orderSlice'
 import { clearCartItems } from '../slices/cartSlice' 
+import { createCheckoutSession } from '../slices/orderSlice'
 
 const PlaceOrderScreen = () => {
   const navigate = useNavigate()
@@ -10,6 +11,7 @@ const PlaceOrderScreen = () => {
 
   const cart = useSelector((state) => state.cart)
   const { order, success, error, loading } = useSelector((state) => state.order)
+  //const { userInfo } = useSelector((state) => state.auth) 
 
   useEffect(() => {
     if (!cart.shippingAddress.address) {
@@ -25,7 +27,15 @@ const PlaceOrderScreen = () => {
       dispatch(clearCartItems())
       dispatch(resetOrder())
     }
+    
   }, [success, navigate, dispatch, order])
+
+  // useEffect(() => {
+  //    if (!userInfo) {
+  //   navigate('/login?redirect=/placeorder')
+  // }
+    
+  // }, [userInfo, navigate])
 
   const addDecimals = (num) => {
     return (Math.round(num * 100) / 100).toFixed(2)
@@ -44,16 +54,33 @@ const PlaceOrderScreen = () => {
   ).toFixed(2)
 
   const placeOrderHandler = () => {
-    dispatch(
-      createOrder({
-        orderItems: cart.cartItems,
-        shippingAddress: cart.shippingAddress,
-        paymentMethod: cart.paymentMethod,
-        itemsPrice,
-        shippingPrice,
-        taxPrice,
-        totalPrice,
-      })
+  dispatch(createCheckoutSession({
+    orderItems: cart.cartItems,
+    shippingAddress: cart.shippingAddress,
+    paymentMethod: cart.paymentMethod,
+    totalPrice: cart.totalPrice,
+  }))
+}
+
+  // const placeOrderHandler = () => {
+  //   dispatch(
+  //     createOrder({
+  //       orderItems: cart.cartItems,
+  //       shippingAddress: cart.shippingAddress,
+  //       paymentMethod: cart.paymentMethod,
+  //       itemsPrice,
+  //       shippingPrice,
+  //       taxPrice,
+  //       totalPrice,
+  //     })
+  //   )
+  // }
+
+  if (loading) {
+    return (
+      <div className='flex justify-center items-center h-64'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900'></div>
+      </div>
     )
   }
 

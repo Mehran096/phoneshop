@@ -1,29 +1,35 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import axios from 'axios'
+const API_URL = import.meta.env.VITE_API_URL
 
 export const createOrder = createAsyncThunk(
-  'order/createOrder',
-  async (order, { getState, rejectWithValue }) => {
-    try {
-      const { auth: { userInfo } } = getState() // ← Get token from Redux
-
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`, // ← This line is missing
-        },
+    'order/createOrder',
+    async (order, { getState, rejectWithValue }) => {
+        try {
+            const { auth: { userInfo } } = getState() // ← Get token from Redux
+            
+            if (!userInfo) {
+        return rejectWithValue('You need to be logged in to place an order')
       }
 
-      const { data } = await axios.post('/api/orders', order, config)
-      return data
-    } catch (error) {
-      return rejectWithValue(
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : error.message
-      )
+
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${userInfo.token}`, // ← This line is missing
+                },
+            }
+
+            const { data } = await axios.post(`${API_URL}/orders`, order, config)
+            return data
+        } catch (error) {
+            return rejectWithValue(
+                error.response && error.response.data.message
+                    ? error.response.data.message
+                    : error.message
+            )
+        }
     }
-  }
 )
 
 
@@ -34,7 +40,7 @@ export const listMyOrders = createAsyncThunk(
         try {
             const { auth: { userInfo } } = getState()
             const config = { headers: { Authorization: `Bearer ${userInfo.token}` } }
-            const { data } = await axios.get('/api/orders/myorders', config)
+            const { data } = await axios.get(`${API_URL}/orders/myorders`, config)
             return data
         } catch (error) {
             return rejectWithValue(error.response && error.response.data.message ? error.response.data.message : error.message)
@@ -49,7 +55,7 @@ export const getOrderDetails = createAsyncThunk(
         try {
             const { auth: { userInfo } } = getState()
             const config = { headers: { Authorization: `Bearer ${userInfo.token}` } }
-            const { data } = await axios.get(`/api/orders/${id}`, config)
+            const { data } = await axios.get(`${API_URL}/orders/${id}`, config)
             return data
         } catch (error) {
             return rejectWithValue(error.response && error.response.data.message ? error.response.data.message : error.message)
@@ -64,7 +70,7 @@ export const payOrder = createAsyncThunk(
         try {
             const { auth: { userInfo } } = getState()
             const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userInfo.token}` } }
-            const { data } = await axios.put(`/api/orders/${orderId}/pay`, paymentResult, config)
+            const { data } = await axios.put(`${API_URL}/orders/${orderId}/pay`, paymentResult, config)
             return data
         } catch (error) {
             return rejectWithValue(error.response && error.response.data.message ? error.response.data.message : error.message)
@@ -79,7 +85,7 @@ export const listOrders = createAsyncThunk(
         try {
             const { auth: { userInfo } } = getState()
             const config = { headers: { Authorization: `Bearer ${userInfo.token}` } }
-            const { data } = await axios.get('/api/orders', config)
+            const { data } = await axios.get(`${API_URL}/orders`, config)
             return data
         } catch (error) {
             return rejectWithValue(error.response && error.response.data.message ? error.response.data.message : error.message)
@@ -94,13 +100,76 @@ export const deliverOrder = createAsyncThunk(
         try {
             const { auth: { userInfo } } = getState()
             const config = { headers: { Authorization: `Bearer ${userInfo.token}` } }
-            const { data } = await axios.put(`/api/orders/${orderId}/deliver`, {}, config)
+            const { data } = await axios.put(`${API_URL}/orders/${orderId}/deliver`, {}, config)
             return data
         } catch (error) {
             return rejectWithValue(error.response && error.response.data.message ? error.response.data.message : error.message)
         }
     }
 )
+
+// Delete order - admin only
+export const deleteOrder = createAsyncThunk(
+    'orders/deleteOrder',
+    async (id, { getState, rejectWithValue }) => {
+        try {
+            const { auth: { userInfo } } = getState() 
+
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${userInfo.token}`,
+                },
+            }
+
+            await axios.delete(`${API_URL}/orders/${id}`, config)
+            return id
+        } catch (error) {
+            return rejectWithValue(
+                error.response && error.response.data.message
+                    ? error.response.data.message
+                    : error.message
+            )
+        }
+    }
+)
+
+// NEW: Stripe checkout session
+export const createCheckoutSession = createAsyncThunk(
+  'order/createCheckoutSession',
+  async (orderData, { getState, rejectWithValue }) => {
+    try {
+      const { auth: { userInfo } }= getState()
+
+      if (!userInfo) {
+        return rejectWithValue('You need to be logged in')
+      }
+
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      }
+
+      const { data } = await axios.post(
+        `${API_URL}/orders/create-checkout-session`, 
+        orderData, 
+        config
+      )
+      
+      // Redirect to Stripe checkout
+      window.location.href = data.url
+      return data
+    } catch (error) {
+      return rejectWithValue(
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message
+      )
+    }
+  }
+)
+
 
 const orderSlice = createSlice({
     name: 'order',
@@ -113,6 +182,7 @@ const orderSlice = createSlice({
         error: null,
         successPay: false,
         successDeliver: false,
+        successDelete: false,
     },
     reducers: {
         resetMyOrders: (state) => {
@@ -128,6 +198,9 @@ const orderSlice = createSlice({
         },
         resetDeliver: (state) => {
             state.successDeliver = false
+        },
+        resetDelete: (state) => {
+            state.successDelete = false
         },
     },
     extraReducers: (builder) => {
@@ -157,8 +230,32 @@ const orderSlice = createSlice({
             .addCase(deliverOrder.pending, (state) => { state.loading = true })
             .addCase(deliverOrder.fulfilled, (state, action) => { state.loading = false; state.successDeliver = true; state.order = action.payload })
             .addCase(deliverOrder.rejected, (state, action) => { state.loading = false; state.error = action.payload })
+            // Delete order
+            .addCase(deleteOrder.pending, (state) => {
+                state.loading = true
+            })
+            .addCase(deleteOrder.fulfilled, (state, action) => {
+                state.loading = false
+                state.successDelete = true
+                state.orders = state.orders.filter(order => order._id !== action.payload)
+            })
+            .addCase(deleteOrder.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.payload
+            })
+             // NEW: handle checkout session
+      .addCase(createCheckoutSession.pending, (state) => {
+        state.loading = true
+      })
+      .addCase(createCheckoutSession.fulfilled, (state) => {
+        state.loading = false
+      })
+      .addCase(createCheckoutSession.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
     },
 })
 
-export const { resetMyOrders, resetOrder, resetPay, resetDeliver } = orderSlice.actions
+export const { resetMyOrders, resetOrder, resetPay, resetDeliver, resetDelete } = orderSlice.actions
 export default orderSlice.reducer

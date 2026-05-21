@@ -1,57 +1,71 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
-import {
-  listProducts,
-  deleteProduct,
-  createProduct,
-  resetProductCreate,
-  resetProductDelete
-} from '../../slices/productSlice'
+//import { useDispatch, useSelector } from 'react-redux'
+ 
+import { useGetProductsQuery, useDeleteProductMutation, useCreateProductMutation } from '../../slices/productsApiSlice'
+import Paginate from '../../components/Paginate'
+import { toast } from 'react-toastify'
+
 
 const ProductListScreen = () => {
-  const dispatch = useDispatch()
+  //const dispatch = useDispatch()
   const navigate = useNavigate()
 
-  const {
-    products,
-    product,
-    loading,
-    error,
-    successDelete,
-    successCreate
-  } = useSelector((state) => state.products)
+  const [pageNumber, setPageNumber] = useState(1)
+  
+  const { data, isLoading, refetch, isError } = useGetProductsQuery({ 
+    pageNumber,
+    pageSize: 6
+  })
+  const [deleteProduct, { isLoading: loadingDelete }] = useDeleteProductMutation()
+ const [createProduct, { isLoading: loadingCreate }] = useCreateProductMutation()
 
-  const { userInfo } = useSelector((state) => state.auth)
-
-  useEffect(() => {
-    if (!userInfo?.isAdmin) {
-      navigate('/login')
-    }
-
-    if (successCreate) {
-      dispatch(resetProductCreate())
-      navigate(`/admin/product/${products._id}/edit`)
-    }
-
-    if (successDelete) {
-      dispatch(resetProductDelete())
-    }
-
-    if (!successCreate) {
-      dispatch(listProducts())
-    }
-  }, [dispatch, navigate, userInfo, successCreate, successDelete, product])
-
-  const deleteHandler = (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      dispatch(deleteProduct(id))
-    }
+  
+  const page = data?.page || 1
+  const pages = data?.pages || 1
+  const handlePageChange = (num) => {
+    setPageNumber(num)
   }
 
-  const createProductHandler = () => {
-    dispatch(createProduct())
+
+  // const { 
+  //   product,
+  //   loading,
+  //   error,
+  //   successDelete,
+  //   successCreate
+  // } = useSelector((state) => state.products)
+
+//   const { userInfo } = useSelector((state) => state.auth)
+
+//   useEffect(() => {
+//     if (!userInfo?.isAdmin) {
+//       navigate('/login')
+//     }
+
+//  }, [ navigate])
+
+  const deleteHandler = async (id) => {
+  if (window.confirm('Are you sure you want to delete this product?')) {
+    try {
+      await deleteProduct(id).unwrap()
+      toast.success('Product deleted')
+    } catch (err) {
+      toast.error(err?.data?.message || err.error)
+    }
   }
+}
+  // const createProductHandler = async () => {
+  //   if (window.confirm('Create a sample product?')) {
+  //     try {
+  //       await createProduct().unwrap()
+  //       refetch()
+  //       toast.success('Product created')
+  //     } catch (err) {
+  //       toast.error(err?.data?.message || err.error)
+  //     }
+  //   }
+  // }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -71,11 +85,11 @@ const ProductListScreen = () => {
         </Link>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="text-center py-10">Loading...</div>
-      ) : error ? (
+      ) : isError ? (
         <div className="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
+          {isError}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -102,7 +116,7 @@ const ProductListScreen = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product) => (
+                {data?.products?.map((product) => (
                   <tr key={product._id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {product._id}
@@ -137,7 +151,14 @@ const ProductListScreen = () => {
                 ))}
               </tbody>
             </table>
+           
           </div>
+          <Paginate 
+            pages={pages} 
+            page={page} 
+            isAdmin={true}
+            onPageChange={handlePageChange}
+          />
         </div>
       )}
     </div>
