@@ -16,11 +16,22 @@ export const createOrder = createAsyncThunk(
             const config = {
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${userInfo.token}`, // ← This line is missing
+                    Authorization: `Bearer ${userInfo.token}`,  
                 },
             }
 
-            const { data } = await axios.post(`${API_URL}/orders`, order, config)
+            // Map cartItems to match backend schema
+      const orderItems = order.orderItems.map(item => ({
+        product: item.product,
+        name: item.name,
+        qty: item.qty,
+        image: item.image,
+        price: item.price,
+         
+      }))
+
+            const { data } = await axios.post(`${API_URL}/orders`, {...order, orderItems}, config)
+             
             return data
         } catch (error) {
             return rejectWithValue(
@@ -190,8 +201,10 @@ const orderSlice = createSlice({
             state.error = null
         },
         resetOrder: (state) => {
+             state.loading = false
             state.success = false
             state.error = null
+             state.order = {}
         },
         resetPay: (state) => {
             state.successPay = false
@@ -202,10 +215,11 @@ const orderSlice = createSlice({
         resetDelete: (state) => {
             state.successDelete = false
         },
+     
     },
     extraReducers: (builder) => {
         builder
-            .addCase(createOrder.pending, (state) => { state.loading = true })
+            .addCase(createOrder.pending, (state) => { state.loading = true, state.error = null })
             .addCase(createOrder.fulfilled, (state, action) => {
                 state.loading = false
                 state.success = true
@@ -254,6 +268,7 @@ const orderSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
+       
     },
 })
 

@@ -7,6 +7,9 @@ const router = express.Router();
 const Stripe = require('stripe');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
+
+
+
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Private
@@ -30,7 +33,7 @@ router.post('/', protect, async (req, res) => { // <-- Add protect here
     const order = new Order({
       orderItems: orderItems.map((x) => ({
         ...x,
-        product: x._id,
+        product: x.product,
         _id: undefined,
       })),
       user: req.user._id, // <-- Use real user instead of hardcoded
@@ -40,6 +43,9 @@ router.post('/', protect, async (req, res) => { // <-- Add protect here
       taxPrice,
       shippingPrice,
       totalPrice,
+
+      isPaid: paymentMethod === 'Cash on Delivery' ? false : false,
+      paidAt: paymentMethod === 'Cash on Delivery' ? undefined : undefined,
     });
 
     const createdOrder = await order.save();
@@ -138,25 +144,78 @@ router.delete('/:id', protect, admin, async (req, res) => {
 })
 
 //stripe payment testing
-router.post('/create-checkout-session', protect, asyncHandler(async (req, res) => {
-  const { orderItems, totalPrice } = req.body
+router.post('/create-checkout-session', protect, async (req, res) => {
+  try {
+    const { orderItems, shippingAddress, paymentMethod, itemsPrice, taxPrice, shippingPrice, totalPrice } = req.body
 
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: orderItems.map(item => ({
-      price_data: {
-        currency: 'usd',
-        product_data: { name: item.name },
-        unit_amount: Math.round(item.price * 100),
-      },
-      quantity: item.qty,
-    })),
-    mode: 'payment',
-    success_url: `${process.env.FRONTEND_URL}/order/success`,
-    cancel_url: `${process.env.FRONTEND_URL}/cart`,
-  })
+    if (!orderItems || orderItems.length === 0) {
+      return res.status(400).json({ message: 'No order items' })
+    }
 
-  res.json({ url: session.url })
-}))
+    // 1. Create order in DB first
+    const order = await Order.create({
+      user: req.user._id,
+      orderItems,
+      shippingAddress,
+      paymentMethod,
+      itemsPrice,
+      taxPrice,
+      shippingPrice,
+      totalPrice,
+      isPaid: false,
+    })
+
+    // console.log('Order created:', order._id)
+    // console.log('FRONTEND_URL:', process.env.FRONTEND_URL)
+
+    // 2. Create Stripe session using the new order._id
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: order.orderItems.map(item => ({
+        price_data: {
+          currency: 'usd',
+          product_data: { name: item.name },
+          unit_amount: Math.round(item.price * 100),
+        },
+        quantity: item.qty,
+      })),
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL}/order/${order._id}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/order/${order._id}`,
+      metadata: { orderId: order._id.toString() },
+      customer_email: req.user.email,
+    })
+
+    res.json({ url: session.url })
+    
+  } catch (error) {
+    //console.error(error)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+router.get('/order/:sessionId', protect, async (req, res) => {
+  const session = await stripe.checkout.sessions.retrieve(req.params.sessionId)
+  
+  if (session.payment_status === 'paid') {
+    const order = await Order.findById(session.metadata.orderId)
+    if (order) {
+      order.isPaid = true
+      order.paidAt = Date.now()
+      order.paymentResult = {
+        id: session.id,
+        status: session.payment_status,
+        update_time: new Date().toISOString(),
+        email_address: session.customer_email,
+      }
+      await order.save()
+      res.json(order)
+    }
+  } else {
+    res.status(404).json({ message: 'Order not paid' })
+  }
+})
+
+
 
 module.exports = router;
