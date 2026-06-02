@@ -1,4 +1,4 @@
-import { useParams, Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import Product from '../components/Product'
 import Paginate from '../components/Paginate'
 import { useGetProductsQuery } from '../slices/productsApiSlice'
@@ -8,10 +8,11 @@ import Message from '../components/Message'
 import { FaShippingFast, FaShieldAlt, FaHeadset } from 'react-icons/fa'
 
 const HomeScreen = () => {
-  const { keyword } = useParams() // keyword still comes from /search/:keyword
+  //const { keyword } = useParams() // keyword still comes from /search/:keyword
   const [searchParams] = useSearchParams()
-
-  const pageNumber = Number(searchParams.get('page')) || 1
+  const keyword = searchParams.get('keyword') || '' 
+  const pageNumber = Number(searchParams.get('pageNumber')) || 1 
+  
 
   const { data, isLoading, error } = useGetProductsQuery({
     keyword: keyword || '',
@@ -25,29 +26,31 @@ const brands = ['Apple', 'Samsung', 'Google', 'OnePlus']
       {!keyword && <HeroBanner />} 
 
        {/* 2. Shop by Brand - Only show on homepage */}
-      {!keyword && (
-        <section className='py-16 bg-gray-50'>
-          <div className='container mx-auto px-4'>
-            <h2 className='text-3xl font-bold text-center mb-12'>Shop by Brand</h2>
-            <div className='grid grid-cols-2 md:grid-cols-4 gap-6'>
-              {brands.map((brand) => (
-                <Link
-                  key={brand}
-                  to={`/search/${brand}`}
-                  className='bg-white p-8 rounded-xl shadow-md hover:shadow-xl transition text-center group'
-                >
-                  <img 
-                    src={`/images/${brand.toLowerCase()}.png`} 
-                    alt={brand} 
-                    className='h-16 mx-auto mb-4 group-hover:scale-110 transition'
-                  />
-                  <h3 className='font-semibold text-lg'>{brand}</h3>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      
+{!keyword && (
+  <section className='py-16 bg-gray-50'>
+    <div className='container mx-auto px-4'>
+      <h2 className='text-3xl font-bold text-center mb-12'>Shop by Brand</h2>
+      <div className='grid grid-cols-2 md:grid-cols-4 gap-6'>
+        {brands.map((brand) => (
+          <Link
+            key={brand}
+            to={`/?keyword=${encodeURIComponent(brand)}&pageNumber=1`}
+            className='bg-white p-8 rounded-xl shadow-md hover:shadow-xl transition text-center group'
+          >
+            <img
+              src={`/images/${brand.toLowerCase()}.svg`}
+              alt={brand}
+              className='h-16 mx-auto mb-4 group-hover:scale-110 transition object-contain'
+              onError={(e) => { e.target.style.display = 'none' }}
+            />
+            <h3 className='font-semibold text-lg'>{brand}</h3>
+          </Link>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
    {/* 3. Products Section */}
 <div className='container mx-auto px-4 py-8'>
   {/* Back button when searching */}
@@ -83,7 +86,8 @@ const brands = ['Apple', 'Samsung', 'Google', 'OnePlus']
         <Paginate
           pages={data.pages}
           page={data.page}
-          keyword={keyword ? keyword : ''}
+          keyword={keyword}
+          isAdmin={false}
         />
       </div>
     </>

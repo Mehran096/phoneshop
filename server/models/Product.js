@@ -16,6 +16,18 @@ const productSchema = mongoose.Schema({
   images: { type: [String], default: [] }, // gallery
   imagePublicIds: { type: [String], default: [] },
   description: { type: String, required: true },
+  colors: {
+    type: [
+      {
+        name: { type: String, required: true }, // "Dry Ice Blue"
+        hexCode: { type: String, required: true }, // "#CBD5E1"
+        images: { type: [String], required: true },
+        countInStock: { type: Number, required: true, default: 0 },
+        price: { type: Number }, // Optional: override base price
+      }
+    ],
+    default: []
+  },
   specs: {
     storage: { type: String }, // 256GB
     ram: { type: String }, // 8GB
