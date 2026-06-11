@@ -37,7 +37,7 @@
 ### Mobile Responsive Design
 ![Mobile View](./screenshots/mobile-view.png)
 
-### Mobile Responsive Design
+### Home Page Banner
 ![Home Page](./screenshots/banner.png)
 
 
