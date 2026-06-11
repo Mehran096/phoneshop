@@ -12,6 +12,7 @@ const productRoutes = require('./routes/productRoutes');
 const { cloudinary } = require('./utils/cloudinary') 
 const orderRoutes = require('./routes/orderRoutes'); 
 const contactRoutes = require('./routes/contactRoutes.js');
+const uploadRoutes = require('./routes/uploadRoutes.js');
 const Stripe = require('stripe');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
   const Order = require('./models/orderModel.js');
@@ -19,6 +20,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 connectDB(); // Connect to MongoDB Atlas
 
 const app = express();
+ 
+// console.log('Using url:', process.env.FRONTEND_URL)
+// console.log('SMTP_HOST:', process.env.SMTP_HOST)
 // 1. Put webhook route BEFORE express.json()
 //app.use('/api/orders/webhook', express.raw({type: 'application/json'}), orderRoutes)
 app.post('/api/orders/webhook', express.raw({type: 'application/json'}), async (req, res) => {
@@ -63,12 +67,13 @@ app.post('/api/orders/webhook', express.raw({type: 'application/json'}), async (
 
 // Middleware
 app.use(cors({
-  origin: ['https://phone-shop-front-end-woad.vercel.app', 'http://localhost:5173'] // Vercel URL + local
+  origin: ['https://phone-shop-front-end-woad.vercel.app', 'http://localhost:5173'],
+   credentials: true  
 }));
 
 app.use(express.json()); // Body parser
 app.use(express.urlencoded({ extended: true }))
-app.use('/api/jazzcash', jazzcashRoutes)
+//app.use('/api/jazzcash', jazzcashRoutes)
 
 // Routes
 app.get('/', (req, res) => {
@@ -82,6 +87,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/contact', contactRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/upload', uploadRoutes);
 
 // Error handling middleware - must be last
 app.use(notFound);

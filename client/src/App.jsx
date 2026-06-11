@@ -1,4 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
+ 
+import { useDispatch, useSelector } from 'react-redux'
 import HomeScreen from './screens/HomeScreen';
 import ProductScreen from './screens/ProductScreen';
 import Header from './components/Header';
@@ -23,20 +25,65 @@ import ProductCreateScreen from './screens/admin/ProductCreateScreen'
 import AllProductsScreen from './screens/AllProductsScreen'
 import FAQScreen from './screens/FAQScreen'
 import ReturnRefundScreen from './screens/ReturnRefundScreen'
+import OrderSuccessScreen from './screens/OrderSuccessScreen';
 import ContactScreen from './screens/ContactScreen'
-import { useEffect } from 'react'
-import { ToastContainer } from 'react-toastify'
-import 'react-toastify/dist/ReactToastify.css'
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen'
+import ResetPasswordScreen from './screens/ResetPasswordScreen'
 
+import { setCartItems } from './slices/cartSlice'
+import axios from 'axios'
+import { useEffect } from 'react'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import api from './utils/axios';
+
+
+ 
 
 
 
 function App() {
   const { pathname, search } = useLocation()
+const dispatch = useDispatch()
+  const { userInfo } = useSelector((state) => state.auth)
+  const { cartItems } = useSelector((state) => state.cart)
 
  useEffect(() => {
   window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
 }, [pathname, search])
+
+useEffect(() => {
+  const mergeCartOnLogin = async () => {
+    if (!userInfo) return // Not logged in
+    
+    // Use localStorage instead of sessionStorage so it persists
+    const hasMerged = localStorage.getItem(`cartMerged_${userInfo._id}`)
+    if (hasMerged) return
+    
+    try {
+      const { data: userCart } = await api.get('/users/cart')
+      
+      if (userCart?.cartItems?.length > 0) {
+        // Returning user - load DB cart
+        dispatch(setCartItems(userCart.cartItems))
+        // REMOVED: toast.success('Loaded your saved cart') 
+      } else if (cartItems?.length > 0) {
+        // New user - save guest cart to DB
+        await api.post('/users/cart', { cartItems } )
+        localStorage.removeItem('cart')
+        toast.success('Guest cart saved to your account')
+      }
+      
+      // Mark as merged for this user ID
+      localStorage.setItem(`cartMerged_${userInfo._id}`, 'true')
+    } catch (err) {
+      console.error('Cart merge error:', err.message)
+      // REMOVED: toast.error('Cart merge failed') - too noisy on login
+    }
+  }
+  
+  mergeCartOnLogin()
+}, [userInfo, dispatch])  
 
   return (
     <>
@@ -44,10 +91,8 @@ function App() {
         <Header />
         <main className="flex-grow">
           <Routes><Route path="/" element={<HomeScreen />} />
-            <Route path='/products' element={<AllProductsScreen />} />
-            {/* <Route path='/search/:keyword' element={<HomeScreen />} />
-            <Route path='/page/:pageNumber' element={<HomeScreen />} />
-            <Route path='/search/:keyword/page/:pageNumber' element={<HomeScreen />} /> */}
+            <Route path='/products' element={<HomeScreen />} />
+            
             <Route path='/faq' element={<FAQScreen />} />
             <Route path='/returns' element={<ReturnRefundScreen />} />
             <Route path='/contact' element={<ContactScreen />} />
@@ -56,11 +101,14 @@ function App() {
             <Route path="/shipping" element={<ShippingScreen />} />
             <Route path="/payment" element={<PaymentScreen />} />
             <Route path="/placeorder" element={<PlaceOrderScreen />} />
+            <Route path='/order-success' element={<OrderSuccessScreen />} />
             <Route path="/order/:id" element={<OrderScreen />} />
             <Route path="/register" element={<RegisterScreen />} />
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/profile" element={<ProfileScreen />} />
             <Route path='/myorders' element={<MyOrdersScreen />} />
+            <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordScreen />} />
 
             {/* Admin Routes */}
             <Route path="" element={<AdminRoute />}>

@@ -1,115 +1,208 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { register } from '../slices/authSlice'
+import { toast } from 'react-toastify'
+import { FaEye, FaEyeSlash } from 'react-icons/fa'
 
 function RegisterScreen() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [localError, setLocalError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { search } = useLocation()
 
   const { userInfo, loading, error } = useSelector((state) => state.auth)
 
+  const sp = new URLSearchParams(search)
+  const redirect = sp.get('redirect') || '/'
+
   useEffect(() => {
     if (userInfo) {
-      navigate('/')
+      navigate(redirect) // App.jsx handles cart merge
     }
-  }, [navigate, userInfo])
+  }, [navigate, userInfo, redirect])
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
 
   const submitHandler = async (e) => {
-    e.preventDefault()
-    setLocalError('')
+  e.preventDefault()
 
-    if (password !== confirmPassword) {
-      setLocalError('Passwords do not match')
-      return
-    }
-
-    dispatch(register({ name, email, password }))
+  if (!name || !email || !password || !confirmPassword) {
+    return toast.error('Please fill all fields')
+  }
+  if (password !== confirmPassword) {
+    return toast.error('Passwords do not match')
+  }
+  if (password.length < 6) {
+    return toast.error('Password must be at least 6 characters')
   }
 
+  try {
+    await dispatch(register({ name, email, password })).unwrap()
+    toast.success('Welcome to PhoneStore! Thank you for your registration')
+  } catch (err) {
+    // error is already handled by your useEffect, but you can add this as backup
+    toast.error(err?.message || err || 'Registration failed')
+  }
+}
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">
-          Create Account
-        </h2>
+    <div className="bg-gray-50 px-4 py-8 sm:py-12">
+      <div className="mx-auto w-full max-w-md">
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+            Create your <span className="text-blue-600">PhoneStore</span> account
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Join us and find your next phone
+          </p>
+        </div>
 
-        <form onSubmit={submitHandler}>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Name</label>
-            <input
-              type="text"
-              placeholder="Enter name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div className="mt-8">
+          <div className="bg-white py-8 px-6 shadow-xl rounded-xl border border-gray-200 sm:px-10">
+            <form className="space-y-5" onSubmit={submitHandler}>
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                  Full name
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-base sm:text-sm"
+                    placeholder="John Doe"
+                  />
+                </div>
+              </div>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              placeholder="Enter email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email address
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-base sm:text-sm"
+                    placeholder="you@example.com"
+                  />
+                </div>
+              </div>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Password</label>
-            <input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <div className="mt-1 relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-base sm:text-sm pr-10"
+                    placeholder="Min 6 characters"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    {showPassword? (
+                      <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
-          <div className="mb-6">
-            <label className="block text-gray-700 mb-2">Confirm Password</label>
-            <input
-              type="password"
-              placeholder="Confirm password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  Confirm password
+                </label>
+                <div className="mt-1 relative">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-base sm:text-sm pr-10"
+                    placeholder="Re-enter password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword? (
+                      <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
-          {(error || localError) && (
-            <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">
-              {error || localError}
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full justify-center rounded-lg border border-transparent bg-blue-600 py-2.5 px-4 text-base sm:text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading? 'Creating account...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="bg-white px-2 text-gray-500">Already have an account?</span>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <Link
+                  to={redirect? `/login?redirect=${redirect}` : '/login'}
+                  className="flex w-full justify-center rounded-lg border border-gray-300 bg-white py-2.5 px-4 text-base sm:text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+                >
+                  Sign in instead
+                </Link>
+              </div>
             </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Registering...' : 'Register'}
-          </button>
-
-          <div className="mt-6 text-center text-gray-600">
-            Already have an account?{' '}
-            <Link to="/login" className="text-blue-600 hover:underline font-medium">
-              Login
-            </Link>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )

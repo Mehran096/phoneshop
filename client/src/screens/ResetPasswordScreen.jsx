@@ -1,42 +1,46 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { login } from '../slices/authSlice'
+import { resetPassword } from '../slices/authSlice'
 import { toast } from 'react-toastify'
 import { FaEye, FaEyeSlash } from 'react-icons/fa'
 
-function LoginScreen() {
-  const [email, setEmail] = useState('')
+function ResetPasswordScreen() {
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const dispatch = useDispatch()
+  const { token } = useParams()
   const navigate = useNavigate()
-  const { search } = useLocation()
+  const dispatch = useDispatch()
 
-  const { userInfo, loading, error } = useSelector((state) => state.auth)
-
-  const sp = new URLSearchParams(search)
-  const redirect = sp.get('redirect') || '/'
-
-  useEffect(() => {
-    if (userInfo) {
-      navigate(redirect)
-    }
-  }, [navigate, userInfo, redirect])
+  const { loading, error, success, message } = useSelector((state) => state.auth)
 
   useEffect(() => {
     if (error) {
       toast.error(error)
     }
-  }, [error])
+    if (success) {
+      toast.success(message || 'Password reset successful')
+      setTimeout(() => navigate('/login'), 2000)
+    }
+  }, [error, success, message, navigate])
 
   const submitHandler = (e) => {
     e.preventDefault()
-    if (!email ||!password) {
+    
+    if (!password ||!confirmPassword) {
       return toast.error('Please fill all fields')
     }
-    dispatch(login({ email, password }))
+    if (password!== confirmPassword) {
+      return toast.error('Passwords do not match')
+    }
+    if (password.length < 6) {
+      return toast.error('Password must be at least 6 characters')
+    }
+
+    dispatch(resetPassword({ token, password }))
   }
 
   return (
@@ -44,10 +48,10 @@ function LoginScreen() {
       <div className="mx-auto w-full max-w-md">
         <div className="text-center">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
-            Sign in to <span className="text-blue-600">PhoneStore</span>
+            Reset your password
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Your Phone, Our Passion
+            Enter your new password below
           </p>
         </div>
 
@@ -55,39 +59,21 @@ function LoginScreen() {
           <div className="bg-white py-8 px-6 shadow-xl rounded-xl border border-gray-200 sm:px-10">
             <form className="space-y-6" onSubmit={submitHandler}>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email address
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-base sm:text-sm"
-                    placeholder="you@example.com"
-                  />
-                </div>
-              </div>
-
-              <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
+                  New password
                 </label>
                 <div className="mt-1 relative">
                   <input
                     id="password"
                     name="password"
                     type={showPassword? 'text' : 'password'}
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                     required
+                    minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-base sm:text-sm pr-10"
-                    placeholder="••••••••"
+                    placeholder="Min 6 characters"
                   />
                   <button
                     type="button"
@@ -104,14 +90,35 @@ function LoginScreen() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end">
-                <div className="text-sm">
-                  <Link
-                    to={redirect? `/forgot-password?redirect=${redirect}` : '/forgot-password'}
-                    className="font-medium text-blue-600 hover:text-blue-500"
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  Confirm new password
+                </label>
+                <div className="mt-1 relative">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-base sm:text-sm pr-10"
+                    placeholder="Re-enter password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    tabIndex={-1}
                   >
-                    Forgot your password?
-                  </Link>
+                    {showConfirmPassword? (
+                      <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -121,7 +128,7 @@ function LoginScreen() {
                   disabled={loading}
                   className="flex w-full justify-center rounded-lg border border-transparent bg-blue-600 py-2.5 px-4 text-base sm:text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loading? 'Signing in...' : 'Sign In'}
+                  {loading? 'Resetting...' : 'Reset Password'}
                 </button>
               </div>
             </form>
@@ -132,16 +139,16 @@ function LoginScreen() {
                   <div className="w-full border-t border-gray-300" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-white px-2 text-gray-500">New to PhoneStore?</span>
+                  <span className="bg-white px-2 text-gray-500">Changed your mind?</span>
                 </div>
               </div>
 
               <div className="mt-6">
                 <Link
-                  to={redirect? `/register?redirect=${redirect}` : '/register'}
+                  to="/login"
                   className="flex w-full justify-center rounded-lg border border-gray-300 bg-white py-2.5 px-4 text-base sm:text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
                 >
-                  Create an account
+                  Back to Sign In
                 </Link>
               </div>
             </div>
@@ -152,4 +159,4 @@ function LoginScreen() {
   )
 }
 
-export default LoginScreen
+export default ResetPasswordScreen
