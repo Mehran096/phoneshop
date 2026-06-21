@@ -8,8 +8,15 @@ const { admin } = require('../middleware/adminMiddleware');
 const { 
    
   forgotPassword, 
-  resetPassword 
+  resetPassword,
+   
 } = require('../controllers/userController')
+const {
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
+  updateWishlistItemQty,
+} = require('../controllers/wishlistController') // NEW IMPORT
 const asyncHandler = require('express-async-handler');
  
 // Generate JWT
@@ -20,6 +27,19 @@ const generateToken = (id) => {
 };
  
  
+
+//  router.delete('/fix-wishlist', protect, asyncHandler(async (req, res) => {
+//   const user = await User.findById(req.user._id)
+  
+//   if (user) {
+//     user.wishlist = []
+//     await user.save()
+//     res.json({ message: 'Wishlist cleared' })
+//   } else {
+//     res.status(404)
+//     throw new Error('User not found')
+//   }
+// }))
 
 // @desc    Register user
 // @route   POST /api/users
@@ -111,64 +131,24 @@ router.post('/cart', protect, asyncHandler(async (req, res) => {
   }
 }))
 
- // @desc    Auth user & get token
-// @route   POST /api/users/login
-// @access  Public
-// router.post('/login', asyncHandler(async (req, res) => {
-//   const { email, password } = req.body
-//   const user = await User.findOne({ email })
-
-//   if (user && (await user.matchPassword(password))) {
-//     res.json({
-//       _id: user._id,
-//       name: user.name,
-//       email: user.email,
-//       isAdmin: user.isAdmin,
-//       token: generateToken(user._id), // ← THIS LINE IS MISSING
-//     })
-//   } else {
-//     res.status(401)
-//     throw new Error('Invalid email or password')
-//   }
-// }))
+router.put('/cart', protect, asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id)
+  user.cartItems = req.body.cartItems || []
+  await user.save()
+  res.json({ cartItems: user.cartItems })
+}))
 
   
-
 
 
 // Example admin route
 router.get('/admin/users', protect, admin, async (req, res) => {
   const users = await User.find({});
   res.json(users);
-  // const user = await User.create({ name, email, password });
-
-  // if (user) {
-  //   generateToken(res, user._id);
-  //   res.status(201).json({
-  //     _id: user._id,
-  //     name: user.name,
-  //     email: user.email,
-  //     isAdmin: user.isAdmin,
-  //   });
-  // } else {
-  //   res.status(400).json({ message: 'Invalid user data' });
-  // }
+   
 });
 
-//   const user = await User.create({ name, email, password });
-
-//   if (user) {
-//     generateToken(res, user._id);
-//     res.status(201).json({
-//       _id: user._id,
-//       name: user.name,
-//       email: user.email,
-//       isAdmin: user.isAdmin,
-//     });
-//   } else {
-//     res.status(400).json({ message: 'Invalid user data' });
-//   }
-// });
+ 
 
 // @desc Auth user & get token
 // @route POST /api/users/auth
@@ -231,6 +211,13 @@ router.get('/profile', protect, asyncHandler(async (req, res) => {
 
 //PUT PROFILE
 router.put('/profile', protect, asyncHandler(async (req, res) => {
+  // Block demo admin from destructive actions
+const isDemoAdmin = req.user.email === 'demo@phonestore.com'
+if (isDemoAdmin) {
+  return res.status(403).json({ 
+    message: 'Demo accounts have read-only access. Contact developer for full admin demo.' 
+  })
+}
   const user = await User.findById(req.user._id)
 
   if (user) {
@@ -255,6 +242,14 @@ router.put('/profile', protect, asyncHandler(async (req, res) => {
     throw new Error('User not found')
   }
 }))
+
+
+
+router.route('/wishlist')
+  .get(protect, getWishlist)
+  .post(protect, addToWishlist)
+
+router.route('/wishlist/:id').delete(protect, removeFromWishlist).put(protect, updateWishlistItemQty)
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -383,7 +378,8 @@ if (isDemoAdmin) {
     throw new Error('User not found')
   }
 })
-
+ 
+  
 
 router.post('/forgotpassword', forgotPassword)
 router.put('/resetpassword/:resettoken', resetPassword)

@@ -32,8 +32,12 @@ const updateCartPrices = (state) => {
     state.cartItems.reduce((acc, item) => acc + item.price * item.qty, 0)
   )
 
-  state.shippingPrice = addDecimals(state.itemsPrice > 500 ? 0 : 10)
-  state.taxPrice = addDecimals(Number((0.15 * state.itemsPrice).toFixed(2)))
+  state.shippingPrice = addDecimals(state.itemsPrice > 100 ? 0 : 10)
+  //state.taxPrice = addDecimals(Number((0.15 * state.itemsPrice).toFixed(2)))
+  //state.taxPrice = addDecimals(0)
+//   state.taxPrice = addDecimals(
+//   state.paymentMethod === 'COD' ? Number((0.15 * state.itemsPrice).toFixed(2)) : 0
+// )
 
   state.totalPrice = addDecimals(
     Number(state.itemsPrice) +

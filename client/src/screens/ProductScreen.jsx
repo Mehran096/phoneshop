@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import RatingStars from '../components/RatingStars';
 import ReviewsModal from '../components/ReviewsModal';
+import OfflineMessage from '../components/OfflineMessage'
 
 import { useSelector, useDispatch } from 'react-redux'
 import { FaThumbsUp } from 'react-icons/fa';
@@ -23,9 +24,10 @@ import Rating from '../components/Rating'
 import { FaEdit, FaCheck, FaTrash, FaShoppingCart } from 'react-icons/fa'
 import { toast } from 'react-toastify'
 import Product360 from '../components/Product360';
+import WishlistButton from '../components/WishlistButton'
 
 
-const ProductScreen = () => {
+const ProductScreen = ({ isOnline }) => {
   const { id: productId } = useParams()
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -42,6 +44,9 @@ const ProductScreen = () => {
 
 
   const [selectedColor, setSelectedColor] = useState(null)
+  
+const [selectedPrice, setSelectedPrice] = useState(0) // ADD THIS
+const [selectedImage, setSelectedImage] = useState('') // ADD THIS
   const [mainImage, setMainImage] = useState('/images/placeholder-phone.jpg') // Default to placeholder
   const [qty, setQty] = useState(1)
   const [rating, setRating] = useState(0)
@@ -86,6 +91,30 @@ const ProductScreen = () => {
 
   const [updateProductReview, { isLoading: loadingUpdateReview }] = useUpdateReviewMutation();
 
+
+  // Set default on load - use whole object
+useEffect(() => {
+  if (product?.colors?.length > 0 &&!selectedColor) {
+    const defaultColor = product.colors[0]
+    setSelectedColor(defaultColor) // Object, not string
+  }
+}, [product])
+
+// Update when user clicks color - use whole object
+useEffect(() => {
+  if (selectedColor) {
+    setSelectedPrice(selectedColor.price)
+    setSelectedImage(selectedColor.images?.[0] || product.image)
+    setMainImage(selectedColor.images?.[0] || product.image)
+  }
+}, [selectedColor])
+
+const selectColorHandler = (color) => {
+  setSelectedColor(color) // Object
+  setQty(1)
+}
+  
+
   // When color changes, reset to first image
   useEffect(() => {
     setSelectedImageIndex(0)
@@ -105,11 +134,11 @@ const ProductScreen = () => {
     }
   }, [product, selectedColor]) // ← Add selectedColor to deps
 
-  const selectColorHandler = (color) => {
-    setSelectedColor(color)
-    setMainImage(color.images?.[0] || product.image || '/images/placeholder-phone.jpg')
-    setQty(1)
-  }
+  // const selectColorHandler = (color) => {
+  //   setSelectedColor(color)
+  //   setMainImage(color.images?.[0] || product.image || '/images/placeholder-phone.jpg')
+  //   setQty(1)
+  // }
 
   const addToCartHandler = () => {
 
@@ -361,6 +390,12 @@ const ProductScreen = () => {
   const showCreateForm = userInfo && !alreadyReviewed && !editingReview;
   const showAlreadyReviewedMsg = userInfo && alreadyReviewed && !editingReview;
 
+  
+// This is the key part - check for network error
+ if (!isOnline || error?.status === 'FETCH_ERROR' || error?.error === 'TypeError: Failed to fetch') {
+  return <OfflineMessage refetch={refetch} isOnline={isOnline} />
+}
+
   if (isLoading) return <Loader />
   if (error) return <Message variant='danger'>{error?.data?.message || error.error}</Message>
 
@@ -449,7 +484,8 @@ const ProductScreen = () => {
                         title={color.name}
                       >
                         {selectedColor?.name === color.name && (
-                          <FaCheck className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg drop-shadow ${color.name.toLowerCase() === 'white' ? 'text-gray-700' : 'text-white'
+                          <FaCheck 
+                          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg drop-shadow ${color.name.toLowerCase() === 'white' ? 'text-gray-700' : 'text-white'
                             }`} />
                         )}
                       </button>
@@ -460,15 +496,16 @@ const ProductScreen = () => {
 
               {/* Qty + Add to Cart - LAST ITEM IN RIGHT COLUMN */}
               {currentStock > 0 && (
-                <div className='flex gap-3 mb-6'>
+                 <div className='flex items-center gap-2 mb-6'>
+                  <label className='text-xs text-gray-500 mb-1 block sm:hidden'>Qty</label>
                   <select
                     value={qty}
                     onChange={(e) => setQty(Number(e.target.value))}
-                    className='px-4 py-3 border-2 border-gray-200 rounded-xl bg-white font-semibold focus:border-blue-600 focus:outline-none'
-                  >
+                   className='w-22 flex-shrink-0 px-2 py-3 border-2 border-gray-200 rounded-xl bg-white font-semibold text-sm'
+    >
                     {[...Array(Math.min(currentStock, 10)).keys()].map((x) => (
                       <option key={x + 1} value={x + 1}>
-                        Qty: {x + 1}
+                         {x + 1}
                       </option>
                     ))}
                   </select>
@@ -478,6 +515,15 @@ const ProductScreen = () => {
                   >
                     <FaShoppingCart /> Add to Cart
                   </button>
+                  <div className='flex-shrink-0'>
+                   <WishlistButton
+                      product={product}
+                      selectedColor={selectedColor}
+                      selectedPrice={selectedPrice}
+                      selectedImage={selectedImage || mainImage}
+                      countInStock={selectedColor?.countInStock}
+                    />
+                  </div>
                 </div>
               )}
             </div>

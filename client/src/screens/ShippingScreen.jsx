@@ -2,12 +2,23 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { saveShippingAddress } from '../slices/cartSlice';
+import PhoneInput from 'react-phone-number-input'
+import { isValidPhoneNumber } from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
+import CheckoutSteps from '../components/CheckoutSteps';
+import { toast } from 'react-toastify'
+
+ 
 
 function ShippingScreen() {
   const cart = useSelector((state) => state.cart);
   //const { loading } = useSelector((state) => state.order)
   const { shippingAddress } = cart;
+  const { userInfo } = useSelector((state) => state.auth)
 
+
+  const [phone, setPhone] = useState(shippingAddress?.phone || '')
+  const [phoneError, setPhoneError] = useState('')
   const [address, setAddress] = useState(shippingAddress?.address || '');
   const [city, setCity] = useState(shippingAddress?.city || '');
   const [postalCode, setPostalCode] = useState(shippingAddress?.postalCode || '');
@@ -16,11 +27,33 @@ function ShippingScreen() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const submitHandler = (e) => {
-    e.preventDefault();
-    dispatch(saveShippingAddress({ address, city, postalCode, country }));
-    navigate('/payment'); // Next step
-  };
+ const submitHandler = (e) => {
+  e.preventDefault();
+
+  // 1. Check if phone is empty
+  if (!phone || phone.trim() === '') {
+    toast.error('Phone number is required');
+    return; // Stop here, don't save/navigate
+  }
+
+  // 2. Check if phone format is valid for Pakistan
+  if (!isValidPhoneNumber(phone)) {
+    toast.error('Please enter a valid phone number');
+    return; // Stop here
+  }
+
+  // 3. If validation passes, save and continue
+  dispatch(saveShippingAddress({
+    phone,
+    address,
+    city,
+    postalCode,
+    country,
+    name: userInfo.name,
+    email: userInfo.email
+  }));
+  navigate('/payment'); // Next step
+};
 
   // if (loading) {
   //   return (
@@ -31,13 +64,36 @@ function ShippingScreen() {
   // }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-start justify-center px-4 py-8">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
+    <>
+     
+     <div className="min-h-screen bg-gray-50 flex items-start justify-center px-4 py-8">
+      <div className="w-full max-w-md">
+        <CheckoutSteps step1 step2 />
         
+        <div className="bg-white rounded-lg shadow-md p-6 mt-4">
+        
+
         <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">Shipping</h1>
 
         <form onSubmit={submitHandler} className="space-y-4">
-          
+          {/* Phone Number */}
+          <div>
+          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+            Phone Number <span className="text-red-500">*</span>
+          </label>
+          <PhoneInput
+            international
+            defaultCountry="PK"
+            value={phone}
+            onChange={setPhone}
+            className={`phone-input ${phoneError ? 'border-red-500' : ''}`}
+            id="phone"
+          />
+          {phoneError && (
+            <p className="text-red-500 text-sm mt-1">{phoneError}</p>
+          )}
+        </div>
+
           {/* Address */}
           <div>
             <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
@@ -111,7 +167,9 @@ function ShippingScreen() {
           </button>
         </form>
       </div>
+       </div>
     </div>
+    </>
   );
 }
 
