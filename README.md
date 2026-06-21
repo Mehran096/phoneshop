@@ -18,6 +18,8 @@
 - Shopping cart with Redux Toolkit + localStorage persistence  
 - Stripe payment integration - currently in test mode
 - Order history and status tracking
+- Product review system with star ratings + review modal + admin reply + image upload
+- Email notifications for orders & password reset - Resend API (prod), Nodemailer (dev)
 - Fully responsive design for mobile/desktop
 
 ## Screenshots
