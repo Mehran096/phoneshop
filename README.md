@@ -1,7 +1,9 @@
 # Phone-Store - Full Stack MERN E-commerce Platform
 
 **Live Demo:** https://www.phone-store.asia
+
 **Live Demo Backup:** https://phone-shop-front-end-woad.vercel.app  
+
 **Demo Admin:** demo@phonestore.com / demo123 - Read-only access
 
 ## Tech Stack
