@@ -1,7 +1,7 @@
 # PhoneShop - Full Stack MERN E-commerce Platform
 
 **Live Demo:** https://phone-shop-front-end-woad.vercel.app  
-**Test Admin Login:** admin@phonestore.com / admin123
+**Demo Admin:** demo@phonestore.com / demo123 - Read-only access
 
 ## Tech Stack
 **Frontend:** React 18, Vite, Tailwind CSS, Redux Toolkit, React Router  
